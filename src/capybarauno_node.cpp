@@ -28,16 +28,19 @@ int beatingheart=0;
 struct Packet heartbeat_packet;
 struct Heartbeat_Payload heartbeat;
 
-// ticks variables
+// relative courrent ticks in signed int
 int16_t leftSignedTicks;
 int16_t rightSignedTicks;
+
+// previous ticks read from uart (needet to compute relative tiks)
 uint16_t previousRightEncoder;
 uint16_t previousLeftEncoder;
 
 int firstTicksMessage=1;
 
-//odometry parameters and costants
+// odometry variables (x, y, theta)
 float x,y,t=0;
+// constant parameters (baseline, right ticks per meter
 float kb,kr,kl;
 
 // ros publishers
@@ -46,7 +49,6 @@ ros::Publisher ticks_publisher;
 
 struct configuration {
     //capybarauno_node
-    string robot_name;
     string serial_device;
     string subscribed_ticks_topic;     // :To Delete
     string published_ticks_topic;
@@ -65,9 +67,7 @@ struct configuration {
     //cmdvel controll
     string cmdvel_topic;
 
-};
-
-struct configuration c;
+} c;
 
 // Controll the robot in ticks
 // Called when a tick massage is received from a ros
@@ -117,12 +117,12 @@ void cmdvelCallback(const geometry_msgs::Twist::ConstPtr& twist)
     }
 }
 
-// read ticks from the serial port and publish the relative ticks in signed int.
-void readTicksFromUartAndPublish(int serialDevice, Packet_Decoder& decoder){
+// read ticks from the serial port, convert them in relative signed int, then save and publish them.
+void readTicksFromUartAndPublish( Packet_Decoder& decoder){
     char chunk;
     int complete=0;
     Packet read_packet;
-    while(read(serialDevice, &chunk, 1)>0 && !complete){
+    while(read(serialFd, &chunk, 1)>0 && !complete){
         complete = Packet_Decoder_putChar(&decoder,(unsigned char)chunk);
     }
     if(complete){
@@ -133,7 +133,7 @@ void readTicksFromUartAndPublish(int serialDevice, Packet_Decoder& decoder){
         previousLeftEncoder = read_packet.state.leftEncoder;
         previousRightEncoder = read_packet.state.rightEncoder;
     }else{
-
+        // needed to compute odometry and publish the relative signed int ticks.
         leftSignedTicks = -(int16_t)(read_packet.state.leftEncoder - previousLeftEncoder);
         rightSignedTicks = (int16_t)(read_packet.state.rightEncoder - previousRightEncoder);
 
@@ -148,24 +148,22 @@ void readTicksFromUartAndPublish(int serialDevice, Packet_Decoder& decoder){
         ticks_publisher.publish(ct);
     }
 
-
 }
 
-void computeOdometryAndPublish(tf::TransformBroadcaster& odom_broadcaster)
-{
+void computeOdometryAndPublish(tf::TransformBroadcaster& odom_broadcaster) {
     if(!ros::ok()) return;
 
     float lt=(float)leftSignedTicks*kl;
     float rt=(float)rightSignedTicks*kr;
-    if(c.debug){
+
+    if(c.debug)
         cerr << "lt: "<<lt<<" rt: "<<rt<<endl;
-    }
 
     float s = (lt*kl+rt*kr)/2;
     t-=(rt*kr-lt*kl)/kb;
-    if(c.debug){
+
+    if(c.debug)
         cerr << "\ttheta: "<<t<<endl;
-    }
 
     x+=s*cos(t);
     y+=s*sin(t);
@@ -191,7 +189,6 @@ void computeOdometryAndPublish(tf::TransformBroadcaster& odom_broadcaster)
     odom.pose.pose.position.z = 0.0;
     odom.pose.pose.orientation = odom_quat;
     odom_pub.publish(odom);
-
 }
 
 void robotCommunication_init(){
@@ -227,7 +224,7 @@ void echoRosParameters(){
     printf("%s %d\n","_hearbeat",c.heartbeat);
 
     //publishers and subscribers
-    printf("%s %s\n","_subscribed_ticks_topic",c.subscribed_ticks_topic.c_str());
+    printf("%s %s\n","_subscribed_ticks_topic",c.subscribed_ticks_topic.c_str());   // :To Delete
     printf("%s %s\n","_published_ticks_topic",c.published_ticks_topic.c_str());
     printf("%s %s\n","_published_odometry_topic",c.published_odometry_topic.c_str());
     printf("%s %s\n","_published_link_name",c.published_link_name.c_str());
@@ -250,7 +247,7 @@ void setRosParameters(ros::NodeHandle n){
     n.param<int>("heartbeat", c.heartbeat, 1);
 
     //publishers and subscribers
-    n.param<string>("subscribed_ticks_topic", c.subscribed_ticks_topic, "requested_ticks");
+    n.param<string>("subscribed_ticks_topic", c.subscribed_ticks_topic, "requested_ticks");                // :To Delete
     n.param<string>("published_ticks_topic", c.published_ticks_topic, "relative_signed_ticks");
     n.param<string>("published_odometry_topic", c.published_odometry_topic, "odom");
     n.param<string>("published_link_name", c.published_link_name, "base_link");
@@ -296,7 +293,7 @@ int main(int argc, char **argv)
 
     robotCommunication_init();
 
-    ros::Subscriber ticks_subscriber = n.subscribe(c.subscribed_ticks_topic.c_str(), 1000, ticksCallback); // :To Delete
+    ros::Subscriber ticks_subscriber = n.subscribe(c.subscribed_ticks_topic.c_str(), 1000, ticksCallback);          // :To Delete
     ros::Subscriber cmdvel_subscriber = n.subscribe(c.cmdvel_topic.c_str(), 1000, cmdvelCallback);
 
     tf::TransformBroadcaster odom_broadcaster;
@@ -305,7 +302,7 @@ int main(int argc, char **argv)
 
     //ros::ok() used to get the SIGINT ctrl+c
     while(ros::ok()){
-        readTicksFromUartAndPublish(serialFd,packet_decoder);
+        readTicksFromUartAndPublish(packet_decoder);
 
         computeOdometryAndPublish(odom_broadcaster);
 
