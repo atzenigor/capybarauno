@@ -3,7 +3,7 @@
 //ros stuff
 #include "ros/ros.h"
 #include "sensor_msgs/Joy.h"
-#include "capybarauno/capybara_ticks.h"             //no needed :To Delete
+#include "capybarauno/capybara_ticks.h"             
 #include "capybarauno/capybara_ticks_signed.h"
 #include "tf/transform_broadcaster.h"
 #include "nav_msgs/Odometry.h"
@@ -129,6 +129,7 @@ void readTicksFromUartAndPublish( Packet_Decoder& decoder){
     if(firstTicksMessage){
         previousLeftEncoder = read_packet.state.leftEncoder;
         previousRightEncoder = read_packet.state.rightEncoder;
+        firstTicksMessage = 0;
     }else{
         // needed to compute odometry and publish the relative signed int ticks.
         leftSignedTicks = -(int16_t)(read_packet.state.leftEncoder - previousLeftEncoder);
@@ -283,16 +284,17 @@ void initOdometryVar(){
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "capybarauno_node",ros::init_options::AnonymousName);
+    ros::init(argc, argv, "capybarauno_node_new",ros::init_options::AnonymousName);
     ros::NodeHandle n("~");
+    ros::Rate r(500); //at least 500hz otherwise it crash
 
     setRosParameters( n );
     echoRosParameters();
 
+    robotCommunication_init();
+
     initHeartbeatVariables();
     initOdometryVar();
-
-    robotCommunication_init();
 
     ros::Subscriber ticks_subscriber  = n.subscribe(c.subscribed_ticks_topic.c_str(), 1000, ticksCallback);
     ros::Subscriber cmdvel_subscriber = n.subscribe(c.subscribed_cmdvel_topic.c_str(), 1000, cmdvelCallback);
@@ -312,7 +314,7 @@ int main(int argc, char **argv)
             send_heartbeat(beatcnt);
 
         ros::spinOnce();
-        usleep(1000);
+        r.sleep();
     }
 
     return 0;
