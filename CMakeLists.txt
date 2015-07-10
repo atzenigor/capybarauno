@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(capybarauno_new)
+project(capybarauno_solo)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
@@ -103,8 +103,8 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(capybarauno_node_new
-    src/capybarauno_node_new.cpp
+add_executable(capybarauno_solo_node
+    src/capybarauno_solo_node.cpp
 
     src/malComm/mal_primitives.cpp
     src/malComm/mal_comm.cpp
@@ -120,8 +120,8 @@ add_executable(capybarauno_node_new
 
 INCLUDE_DIRECTORIES(EIGEN3_INCLUDE_DIR /usr/include/eigen3 )
 
-target_link_libraries(capybarauno_node_new ${catkin_LIBRARIES} )
-add_dependencies(capybarauno_node_new ${PROJECT_NAME}_gencpp)
+target_link_libraries(capybarauno_solo_node ${catkin_LIBRARIES} )
+add_dependencies(capybarauno_solo_node ${PROJECT_NAME}_gencpp)
 
 
 

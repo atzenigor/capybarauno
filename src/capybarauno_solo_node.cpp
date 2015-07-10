@@ -3,8 +3,8 @@
 //ros stuff
 #include "ros/ros.h"
 #include "sensor_msgs/Joy.h"
-#include "capybarauno_new/capybara_ticks.h"
-#include "capybarauno_new/capybara_ticks_signed.h"
+#include "capybarauno_solo/capybara_ticks.h"
+#include "capybarauno_solo/capybara_ticks_signed.h"
 #include "tf/transform_broadcaster.h"
 #include "nav_msgs/Odometry.h"
 #include "geometry_msgs/Twist.h"
@@ -68,14 +68,9 @@ struct configuration {
     int debug;
 } c;
 
-// Controll the robot in ticks
-// Called when a tick massage is received from ros
-// Forward the ticks to the serial port
-void ticksCallback(const capybarauno_new::capybara_ticksConstPtr& ticks)
-{
-    if(!ros::ok()) return;
-    speedPayload.leftTick=ticks->leftEncoder;
-    speedPayload.rightTick=ticks->rightEncoder;
+void sendTicks(uint16_t leftTicks,uint16_t rightTicks ){
+    speedPayload.leftTick = leftTicks/1000; //the frequency of the controller is 1000Hz
+    speedPayload.rightTick = rightTicks/1000;
     //assign the payload to the general packet
     packet.speed=speedPayload;
     char buf[255];
@@ -86,9 +81,17 @@ void ticksCallback(const capybarauno_new::capybara_ticksConstPtr& ticks)
         ROS_INFO("SENDING: %s\n",buf);
 }
 
+// Controll the robot in ticks
+// Called when a tick massage is received from ros
+// Forward the ticks to the serial port
+void ticksCallback(const capybarauno_solo::capybara_ticksConstPtr& ticks){
+    if(!ros::ok()) return;
+
+    sendTicks(ticks->leftEncoder, ticks->rightEncoder);
+}
+
 // Controll the reobot in cmdvel
-void cmdvelCallback(const geometry_msgs::Twist::ConstPtr& twist)
-{
+void cmdvelCallback(const geometry_msgs::Twist::ConstPtr& twist){
     if(!ros::ok()) return;
     //get absolute speed values, expressed in tick per interval
     float translational_velocity =   twist->linear.x * 2;
@@ -98,19 +101,10 @@ void cmdvelCallback(const geometry_msgs::Twist::ConstPtr& twist)
         ROS_INFO("LINEAR %f ANGULAR %f ANGULAR AFTER BASELINE %f", twist->linear.x, twist->angular.z,rotational_velocity);
     }
 
-    speedPayload.leftTick = (-translational_velocity + rotational_velocity) / (kl * 2);
-    speedPayload.rightTick = (translational_velocity + rotational_velocity) / (kr * 2);
-    if(c.debug){
-        ROS_INFO("TICKS %d %d",speedPayload.leftTick, speedPayload.rightTick);
-    }
-    //assign the payload to the general packet
-    packet.speed=speedPayload;
-    char buf[255];
-    char* pEnd=Packet_write(&packet,buf,c.ascii);
-    //send it
-    sendToUart(serialFd,buf,pEnd-buf,0);
-    if(c.debug)
-        ROS_INFO("SENDING: %s\n",buf);
+    float leftTicks = (-translational_velocity + rotational_velocity) / (kl * 2);
+    float rightTicks = (translational_velocity + rotational_velocity) / (kr * 2);
+
+    sendTicks(leftTicks, rightTicks);
 }
 
 // read ticks from the serial port, convert them in relative signed int, then save and publish them.
@@ -138,15 +132,15 @@ void readTicksFromUartAndPublish( Packet_Decoder& decoder){
         previousRightEncoder = read_packet.state.rightEncoder;
 
         // publish relative ticks
-        capybarauno_new::capybara_ticks_signed ct;
+        capybarauno_solo::capybara_ticks_signed ct;
         ct.leftEncoder=leftSignedTicks;
         ct.rightEncoder=rightSignedTicks;
         ct.header.stamp=ros::Time::now();
         ct.header.seq=read_packet.seq + 1;
         rel_ticks_publisher.publish(ct);
-
     }
-    capybarauno_new::capybara_ticks ticks_message;
+
+    capybarauno_solo::capybara_ticks ticks_message;
     ticks_message.header.seq = read_packet.seq;
     ticks_message.header.stamp = ros::Time::now();
     ticks_message.leftEncoder = read_packet.state.leftEncoder;
@@ -154,7 +148,7 @@ void readTicksFromUartAndPublish( Packet_Decoder& decoder){
     abs_ticks_publisher.publish(ticks_message);
 }
 
-void computeOdometryAndPublish(tf::TransformBroadcaster& odom_broadcaster) {
+void computeOdometryAndPublish(tf::TransformBroadcaster& odom_broadcaster){
     if(!ros::ok()) return;
 
     float lt=leftSignedTicks*kl;
@@ -282,8 +276,7 @@ void initOdometryVar(){
     kl = atof(c.kleft.c_str());
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
     ros::init(argc, argv, "capybarauno_node_new",ros::init_options::AnonymousName);
     ros::NodeHandle n("~");
     ros::Rate r(500); //at least 500hz otherwise it crash
@@ -301,8 +294,8 @@ int main(int argc, char **argv)
 
     tf::TransformBroadcaster odom_broadcaster;
     odom_publisher      = n.advertise<nav_msgs::Odometry>(c.published_odometry_topic.c_str(), 1000);
-    rel_ticks_publisher = n.advertise<capybarauno_new::capybara_ticks_signed>(c.published_rel_ticks_topic.c_str(), 1000);
-    abs_ticks_publisher = n.advertise<capybarauno_new::capybara_ticks>(c.published_abs_ticks_topic.c_str(), 1000);
+    rel_ticks_publisher = n.advertise<capybarauno_solo::capybara_ticks_signed>(c.published_rel_ticks_topic.c_str(), 1000);
+    abs_ticks_publisher = n.advertise<capybarauno_solo::capybara_ticks>(c.published_abs_ticks_topic.c_str(), 1000);
 
     //ros::ok() used to get the SIGINT ctrl+c
     while(ros::ok()){
