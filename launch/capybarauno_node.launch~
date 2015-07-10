@@ -1,5 +1,5 @@
 <launch>
-	<arg name="robot_name" default="/capy1" />
+	<arg name="robot_name" default="" />
 	<arg name="serial_device" default="/dev/ttyACM0" />
 
     	<arg name="subscribed_cmdvel_topic" default="/cmd_vel" />

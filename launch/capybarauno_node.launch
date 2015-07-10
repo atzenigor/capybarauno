@@ -10,8 +10,8 @@
 	<arg name="published_link_name" default="/base_link" />
 	<arg name="published_odom_link_name" default="/odom" />
 
-	<arg name="kleft" default="0.0058f" />
-	<arg name="kright" default="0.0058f" />
+	<arg name="kleft" default="0.0000058f" />
+	<arg name="kright" default="0.0000058f" />
 	<arg name="kbaseline" default="0.305f" />
 	
 	<arg name="ascii" default="0" />
