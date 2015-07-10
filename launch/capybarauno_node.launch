@@ -18,7 +18,7 @@
 	<arg name="heartbeat" default="1" />
 	<arg name="debug" default="1" />
 
-	<node name="capybarauno_node_new" pkg="capybarauno_new" type="capybarauno_node_new" output="screen">
+	<node name="capybarauno_solo_node" pkg="capybarauno_solo" type="capybarauno_solo_node" output="screen">
 		<param name="~robot_name" value="$(arg robot_name)"/>
 		<param name="~serial_device" value="$(arg serial_device)"/> 
 

@@ -277,7 +277,7 @@ void initOdometryVar(){
 }
 
 int main(int argc, char **argv){
-    ros::init(argc, argv, "capybarauno_node_new",ros::init_options::AnonymousName);
+    ros::init(argc, argv, "capybarauno_solo_node",ros::init_options::AnonymousName);
     ros::NodeHandle n("~");
     ros::Rate r(500); //at least 500hz otherwise it crash
 
