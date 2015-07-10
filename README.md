@@ -7,8 +7,8 @@ the capybara robot is an open source and open hardware differential drive robot.
 The firmware source code is available https://github.com/mauriliodc/capybara
 
 #### Ros Node
-## capybarauno_solo_node
-#  It subscribes to:
+##### capybarauno_solo_node
+  It subscribes to:
     *md_vel topic to controll the robot with linear and angular velocities expressend in m/s,
     *requested_ticks topic to controll the robot in ticks per second.
   It provides:
