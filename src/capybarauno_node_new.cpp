@@ -3,8 +3,8 @@
 //ros stuff
 #include "ros/ros.h"
 #include "sensor_msgs/Joy.h"
-#include "capybarauno/capybara_ticks.h"             
-#include "capybarauno/capybara_ticks_signed.h"
+#include "capybarauno_new/capybara_ticks.h"
+#include "capybarauno_new/capybara_ticks_signed.h"
 #include "tf/transform_broadcaster.h"
 #include "nav_msgs/Odometry.h"
 #include "geometry_msgs/Twist.h"
@@ -43,7 +43,6 @@ float x, y, theta=0;
 // constant parameters (baseline, right ticks per meter, left ticks per meter)
 float kb, kr, kl;
 
-// ros publishers
 ros::Publisher odom_publisher;
 ros::Publisher rel_ticks_publisher; // relative ticks publisher
 ros::Publisher abs_ticks_publisher; // absolute ticks publisher
@@ -72,7 +71,7 @@ struct configuration {
 // Controll the robot in ticks
 // Called when a tick massage is received from ros
 // Forward the ticks to the serial port
-void ticksCallback(const capybarauno::capybara_ticksConstPtr& ticks)
+void ticksCallback(const capybarauno_new::capybara_ticksConstPtr& ticks)
 {
     if(!ros::ok()) return;
     speedPayload.leftTick=ticks->leftEncoder;
@@ -139,7 +138,7 @@ void readTicksFromUartAndPublish( Packet_Decoder& decoder){
         previousRightEncoder = read_packet.state.rightEncoder;
 
         // publish relative ticks
-        capybarauno::capybara_ticks_signed ct;
+        capybarauno_new::capybara_ticks_signed ct;
         ct.leftEncoder=leftSignedTicks;
         ct.rightEncoder=rightSignedTicks;
         ct.header.stamp=ros::Time::now();
@@ -147,7 +146,7 @@ void readTicksFromUartAndPublish( Packet_Decoder& decoder){
         rel_ticks_publisher.publish(ct);
 
     }
-    capybarauno::capybara_ticks ticks_message;
+    capybarauno_new::capybara_ticks ticks_message;
     ticks_message.header.seq = read_packet.seq;
     ticks_message.header.stamp = ros::Time::now();
     ticks_message.leftEncoder = read_packet.state.leftEncoder;
@@ -247,14 +246,15 @@ void setRosParameters(ros::NodeHandle n){
     n.param<string>("published_odometry_topic", c.published_odometry_topic, "/odom");
     n.param<string>("published_link_name",      c.published_link_name, "/base_link");
     n.param<string>("published_odom_link_name", c.published_odom_link_name, "/odom");
-
-    c.subscribed_cmdvel_topic = c.robot_name + c.subscribed_cmdvel_topic;
-    c.subscribed_ticks_topic = c.robot_name + c.subscribed_ticks_topic;
-    c.published_rel_ticks_topic = c.robot_name + c.published_rel_ticks_topic;
-    c.published_abs_ticks_topic = c.robot_name + c.published_abs_ticks_topic;
-    c.published_odometry_topic = c.robot_name + c.published_odometry_topic;
-    c.published_link_name = c.robot_name + c.published_link_name;
-    c.published_odom_link_name = c.robot_name + c.published_odom_link_name;
+    if(c.robot_name  != ""){
+        c.subscribed_cmdvel_topic = "/"+c.robot_name + c.subscribed_cmdvel_topic;
+        c.subscribed_ticks_topic = "/"+c.robot_name + c.subscribed_ticks_topic;
+        c.published_rel_ticks_topic = "/"+c.robot_name + c.published_rel_ticks_topic;
+        c.published_abs_ticks_topic = "/"+c.robot_name + c.published_abs_ticks_topic;
+        c.published_odometry_topic = "/"+c.robot_name + c.published_odometry_topic;
+        c.published_link_name = "/"+c.robot_name + c.published_link_name;
+        c.published_odom_link_name = "/"+c.robot_name + c.published_odom_link_name;
+    }
 
     n.param<string>("kbaseline",c.kbaseline, "0.2f");
     n.param<string>("kleft",    c.kleft, "0.001f");
@@ -301,8 +301,8 @@ int main(int argc, char **argv)
 
     tf::TransformBroadcaster odom_broadcaster;
     odom_publisher      = n.advertise<nav_msgs::Odometry>(c.published_odometry_topic.c_str(), 1000);
-    rel_ticks_publisher = n.advertise<capybarauno::capybara_ticks_signed>(c.published_rel_ticks_topic.c_str(), 1000);
-    abs_ticks_publisher = n.advertise<capybarauno::capybara_ticks>(c.published_abs_ticks_topic.c_str(), 1000);
+    rel_ticks_publisher = n.advertise<capybarauno_new::capybara_ticks_signed>(c.published_rel_ticks_topic.c_str(), 1000);
+    abs_ticks_publisher = n.advertise<capybarauno_new::capybara_ticks>(c.published_abs_ticks_topic.c_str(), 1000);
 
     //ros::ok() used to get the SIGINT ctrl+c
     while(ros::ok()){
