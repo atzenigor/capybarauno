@@ -8,8 +8,8 @@ The firmware source code is available https://github.com/mauriliodc/capybara
 
 #### Ros Node
 It subscribes to:
-* cmd_vel topic to controll the robot with linear and angular velocities expressend in m/s,
-* requested_ticks topic to controll the robot in ticks per second.
+* cmd_vel topic to control the robot with linear and angular velocities expressed in m/s,
+* requested_ticks topic to control the robot in ticks per second.
 
 It provides:
 * /relative_signed_ticks topic: ticks per second expressed in signed int 16,
