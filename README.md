@@ -18,6 +18,6 @@ It provides:
 
 It also broadcast the trasformation /tf from /odom to /base_link
 
-The parameter "robot_name" is used to set the namespace so that each topic name i preceded fram the value of this parameter.
+The parameter "robot_name" is used to set the namespace so that each topic name i preceded from the value of this parameter.
 
   
